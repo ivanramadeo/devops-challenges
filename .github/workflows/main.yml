@@ -9,7 +9,7 @@ on:
     branches:
       - "main"
     paths:
-      - 'app-devops/**'
+      - "app-devops/**"
 
 jobs:
   build:
