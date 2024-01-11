@@ -15,6 +15,17 @@ pipeline {
                 
             }
         }
+        stage('Lint Dockerfile') {
+            steps {
+                script {
+                    def hadolintExitCode = sh(script: "docker run --rm -i hadolint/hadolint < app-devops/Dockerfile", returnStatus: true)
+                    if (hadolintExitCode != 0) {
+                        currentBuild.result = 'FAILURE'
+                        error("Hadolint found issues in the Dockerfile")
+                    }
+                }
+            }
+        }        
 
         stage('Login to Dockerhub'){
             steps{
