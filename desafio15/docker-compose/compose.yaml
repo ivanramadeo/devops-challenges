@@ -1,9 +1,0 @@
-version: '3.7'
-services:
-  node-press:
-    image: ivanramadeo/node-press:1.0
-    container_name: np-compose
-    ports:
-      - "3000:3000"
-
-  
