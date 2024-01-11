@@ -40,12 +40,10 @@ jobs:
       -
         name: Push Docker image to DockerHub
         run: docker push ${{ secrets.DOCKER }}/${{ env.NAME_CONTAINER }}:${{ github.run_number }}
-      -
-        name: Deploy container
+      - name: Deploy container
         run: |
-          if docker stop ${{ env.NAME_CONTAINER }}; then
-            docker rm -f ${{ env.NAME_CONTAINER }}
-          fi
+          docker stop ${{ env.NAME_CONTAINER }} || true
+          docker rm ${{ env.NAME_CONTAINER }} || true
           docker run -d --name ${{ env.NAME_CONTAINER }} -p 3000:3000 ${{ secrets.DOCKER }}/${{ env.NAME_CONTAINER }}:${{ github.run_number }}
       -
         name: Docker logout
