@@ -1,51 +1,38 @@
+
 name: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - 'main'
+      - main
     paths:
       - 'app-devops/**'
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-20.04
-    env:
-        NAME_CONTAINER: node-press
-        
+  build:
+    runs-on: ubuntu-20.04 
     steps:
       - 
         name: Checkout
         uses: actions/checkout@v4
+-
+        name: Run Hadolint
+        uses:hadolint/hadolint-action@3.1.0
+        with
+            dockerfile: Dockerfile        
       -
         name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER}}
-          password: ${{ secrets.TOKEN}}
+          username: ${{ secrets.DOCKER }}
+          password: ${{ secrets.TOKEN }}
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       -
-        name: Build the Docker image
-        run: docker build -t ${{ secrets.DOCKER}}/${{ env.NAME_CONTAINER }}:${{ github.run_number }} app-devops
-      -
-        name: Lint Dockerfile
-        run: |
-          hadolintExitCode=$(docker run --rm -i hadolint/hadolint < app-devops/Dockerfile)
-          if [ "$hadolintExitCode" != "0" ]; then
-            echo "Hadolint found issues in the Dockerfile"
-            exit 1
-          fi
-      -
-        name: Push Docker image to DockerHub
-        run: docker push ${{ secrets.DOCKER }}/${{ env.NAME_CONTAINER }}:${{ github.run_number }}
-      - 
-        name: Deploy container
-        run: |
-          docker stop ${{ env.NAME_CONTAINER }} || true
-          docker rm ${{ env.NAME_CONTAINER }} || true
-          docker run -d --name ${{ env.NAME_CONTAINER }} -p 3000:3000 ${{ secrets.DOCKER }}/${{ env.NAME_CONTAINER }}:${{ github.run_number }}
-      -
-        name: Docker logout
-        run: docker logout
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:.app-devops/Docker"
+          push: true
+          tags: ${{ secrets.DOCKER}}/node-press:${{ github.run_number }}
