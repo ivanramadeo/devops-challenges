@@ -1,18 +1,52 @@
-name: Docker Image CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+    paths:
+      - 'app-devops/**'
 
 jobs:
-
-  build:
-
-    runs-on: ubuntu-latest
-
+  build-and-deploy:
+    runs-on: ubuntu-20.04
+    env:
+        NAME_CONTAINER: node-press
+        
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER}}
+          password: ${{ secrets.TOKEN}}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build the Docker image
+        run: docker build -t ${{ secrets.DOCKER}}/${{ env.NAME_CONTAINER }}:${{ github.run_number }} app-devops
+      -
+        name: Lint Dockerfile
+        run: |
+          hadolintExitCode=$(docker run --rm -i hadolint/hadolint < app-devops/Dockerfile)
+          if [ "$hadolintExitCode" != "0" ]; then
+            echo "Hadolint found issues in the Dockerfile"
+            exit 1
+          fi
+      -
+        name: Push Docker image to DockerHub
+        run: docker push ${{ secrets.DOCKER }}/${{ env.NAME_CONTAINER }}:${{ github.run_number }}
+      -
+        name: Deploy container
+        run: |
+          if docker stop ${{ env.NAME_CONTAINER }}; then
+            docker rm -f ${{ env.NAME_CONTAINER }}
+          fi
+          docker run -d --name ${{ env.NAME_CONTAINER }} -p 3000:3000 ${{ secrets.DOCKER }}/${{ env.NAME_CONTAINER }}:${{ github.run_number }}
+      -
+        name: Docker logout
+        run: docker logout
